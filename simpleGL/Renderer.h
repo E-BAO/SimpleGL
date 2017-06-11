@@ -10,6 +10,7 @@
 #define _RENDERER_H_
 
 #include "SimpleMath.h"
+#include "Scene.h"
 #include <iostream>
 #include <vector>
 using namespace std;
@@ -32,7 +33,13 @@ typedef struct{
     transform_s transform;
     
     void init();
+    
+    void render(Scene* scene);
+    
     void clearBuffer(color_s color = color_s(0.0,0.0,0.0,1.0));
+    
+    void drawObject(Object object);
+    
     void drawLine(int x1,int y1,float z1,color_s color1,int x2,int y2,float z2,color_s color2);
     void drawPixel(int x,int y,float z,color_s color);
     void drawScanLine(int y,scanline_s* scanline);

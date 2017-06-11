@@ -26,8 +26,113 @@ void Renderer::clearBuffer(color_s color){
                 frameBuffer[i * MAX_WIDTH + j][2] = color.b;
             }
     }
+    
     background = color;
     memset(zBuffer, 1e6, sizeof(zBuffer));
+    
+    for(int j = 0;j < win_width;j++){
+        frameBuffer[win_height/2 * win_width + j][0] = 1.0f;
+        zBuffer[win_height/2 * win_width + j] = -10.0f;
+    }
+    for(int i = 0;i < win_height;i++){
+        frameBuffer[i * win_width + win_width/2][0] = 1.0f;
+        zBuffer[i * win_width + win_width/2] = -10.0f;
+    }
+}
+
+void Renderer::render(Scene* scene){
+    
+    //uniform
+    scene->transform = transform;
+    
+    Light* light0 = &scene->light;
+    transform_s* transform = &scene->transform;
+    matrix_s normalMatrix = transform->view * transform->world;
+    normalMatrix.print();
+    
+    normalMatrix = normalMatrix.inverse();
+    normalMatrix = normalMatrix.transpose();
+    
+    normalMatrix.print();
+    
+    point_s lightDir = scene->light.pos;
+    lightDir.w = 0.0f;
+    lightDir.normalize();
+    
+    for(int i = 0;i < scene->objectsN;i++){
+        Object *obj = &scene->objectArray[i];
+        int triangleNum = obj->triangleNum;
+        material_s *material = obj->material;
+        color_s ambient = material->ambient * light0->ambient;
+        color_s diffuse = material->diffuse * light0->diffuse;
+        //globel ambient
+        
+        color_s specular(0.0,0.0,0.0,1.0);// = material->specular;// * light0->;
+        float shininess = material->shininess;
+        
+        vertex_s vertexArray[3 * triangleNum];
+        
+        for(int j = 0;j < triangleNum;j++){
+            //set gl_Position
+            for(int k = 0;k < 3;k++){
+                //set gl_Color
+                
+    //            float ux = obj->texCoord[3 * j].x;
+    //            float uy = obj->texCoord[3 * j].y;
+                
+//                color_s ambient = obj->texture->getTexture(obj->texCoord[3 * j + k]);
+//                color_s diffuse = ambient;//material->diffuse * light0->diffuse;
+                
+                //color_s color = obj->texture.getTexture(ux,uy);
+                
+                //vector_s normal = mat3(transpose(inverse(model)));
+                
+                vector_s vn = obj->normalArray[3 * j + k];
+                vector_s normal = normalMatrix * vn;
+                normal.normalize();//only xyz
+                normal.w = 0.0f;
+                
+                float NdotLres = normal * lightDir;
+                
+                float NdotL = max(NdotLres,0.0);
+                
+                vector_s position = obj->vertexArray[3 * j + k];
+                //position.w = 0.0f;
+                
+                if(NdotL > 0.0){
+                    matrix_s modelViewMatrix = scene->transform.view * scene->transform.world;
+                    vector_s ecPos = modelViewMatrix * position;
+                    vector_s aux = light0->pos - ecPos;
+                    aux.w = 0.0f;
+                    aux.normalize();
+                    aux.w = 0.0f;
+                    
+                    vector_s viewDir = ecPos * (1.0/ecPos.w);
+                    viewDir.w = 0.0f;
+                    viewDir.normalize();
+                    
+                    vector_s halfVector = aux - viewDir;
+                    halfVector.w = 0.0f;
+                    halfVector.normalize();
+                    
+                    float NdotHV = max(normal * halfVector,0.0);
+                    
+                    specular = material->specular;// * light0->specular;
+                    specular = specular * pow(NdotHV,material->shininess);
+                }
+                
+                color_s color = diffuse * NdotL;
+                //color += ambient;
+                color += specular;
+                color += scene->globalAmbient;
+                
+                vertexArray[3 * j + k].pos = position;
+                vertexArray[3 * j + k].color = color;
+            }
+            vertex_s vertex[3] = {vertexArray[3 * j],vertexArray[3 * j + 1],vertexArray[3 * j + 2]};
+            drawTriangle(vertex);
+        }
+    }
 }
 
 scanline_s scanlines[MAX_HEIGHT];
@@ -40,7 +145,8 @@ void Renderer::drawTriangle(vertex_s vertex[3]){
     for(int i = 0;i < 3;i++){
         point_s v = transform.totalTransform * vertex[i].pos;
         v.devWeight();
-        v.print();
+        //std::cout<<"z"<<i<<"="<<v.z<<std::endl;
+        //v.print();
         bool flag = is_out_of_range(v);
         if(flag)return;
         vi[i].x = win_width / 2 + v.x * (float)(win_width / 2);
@@ -112,7 +218,7 @@ void Renderer::drawLines(vertex_s vertex[],int N,LineType type){
     for(int i = 0;i < 3;i++){
         point_s v = transform.totalTransform * vertex[i].pos;
         v.devWeight();
-        v.print();
+        //v.print();
         bool flag = is_out_of_range(v);
         if(flag)return;
         vi[i].x = win_width / 2 + v.x * (float)(win_width / 2);
@@ -191,7 +297,7 @@ void Renderer::drawLine(int x1,int y1,float z1,color_s color1,int x2,int y2,floa
             color += dc;
             z += dz;
             scanlines[i].update(x1, z,color);
-            drawPixel(x1,i,z,color);
+            //drawPixel(x1,i,z,color);
         }
         return;
     }
@@ -214,7 +320,7 @@ void Renderer::drawLine(int x1,int y1,float z1,color_s color1,int x2,int y2,floa
         float dz = (z2 - z1)/(float)(y2 - y1);
         for(int j = y1;j <= y2;j++){
             scanlines[j].update((int)xf, z,color);
-            drawPixel((int)xf, j,z, color);
+            //drawPixel((int)xf, j,z, color);
             xf += k;
             z += dz;
             color += dc;
@@ -223,31 +329,30 @@ void Renderer::drawLine(int x1,int y1,float z1,color_s color1,int x2,int y2,floa
         if(x1 > x2){
             swap(x1, x2);
             swap(y1, y2);
+            swap(z1, z2);
             swap(color1, color2);
         }
         float yf = y1;
         color_s color = color1;
         color_s dc = color2 - color1;
         dc = dc * (1.0/(float)(x2 - x1));
-        double z = z1;
-        double dz = (z2 - z2)/(double)(x2 - x1);
-//        cout<<"++++++++z"<<z<<endl;
+        float z = z1;
+        float dz = (z2 - z1)/(float)(x2 - x1);
 
         for(int i = x1;i <= x2;i++){
             scanlines[(int)yf].update(i, z,color);
-            drawPixel(i, (int)yf,(float)z, color);
+            //drawPixel(i, (int)yf,(float)z, color);
             yf += k;
             z += dz;
             color += dc;
         }
- //       cout<<"_______z"<<z<<endl;
     }
 }
 
 //write color value in framebuffer at x,y
 void Renderer::drawPixel(int x,int y,float z,color_s color){
     
-    if(zBuffer[y * win_width + x] < z)return;
+    if(zBuffer[y * win_width + x] < z + 1e-6)return;
     
     if(x >= 0 && x <= win_width && y >= 0 && y<= win_height){
         frameBuffer[y * win_width + x][0] = color.r;

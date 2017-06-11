@@ -27,5 +27,7 @@ void swap(float &a,float &b);
 
 float degree2Radio(float degree);
 
+float max(float,float);
+
 #endif /* _SIMPLEMATH_H_ */
 

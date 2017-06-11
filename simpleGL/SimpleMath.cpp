@@ -42,3 +42,8 @@ void swap(vertex2i &a,vertex2i &b){
 float degree2Radio(float degree){
     return degree * M_PI / 180.0f;
 }
+
+float max(float a,float b){
+    return a > b ? a:b;
+}
+

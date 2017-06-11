@@ -14,9 +14,19 @@
 #include <math.h>
 using namespace std;
 
-typedef struct Color{
+typedef struct Color color_s;
+
+struct Color{
     float r,g,b,a;
     Color(){};
+    
+//    Color(const Color &c2) {
+//        this->r = c2.r;
+//        this->g = c2.g;
+//        this->b = c2.b;
+//        this->a = c2.a;
+//    }
+    
     Color(float r,float g,float b,float a) {
         this->r = r;
         this->g = g;
@@ -43,6 +53,14 @@ typedef struct Color{
         return Color(-r,-g,-b,1.0);
     }
     
+//    Color& operator = (Color &c2){
+//        this->r = c2.r;
+//        this->g = c2.g;
+//        this->b = c2.b;
+//        this->a = c2.a;
+//        return *this;
+//    }
+//    
     Color& operator -= (Color &c2){
         Color res = -c2;
         return operator+=(res);
@@ -50,9 +68,10 @@ typedef struct Color{
     
     friend Color operator+(Color &c1,Color &c2);
     friend Color operator-(Color &c1,Color &c2);
+    friend Color operator*(Color &c1,Color &c2);
     friend Color operator*(Color &c,float f);
     
-}color_s;
+};
 
 inline Color operator+(Color &c1,Color &c2){
     return Color( c1.r * c1.a + c2.r * c2.a,
@@ -64,6 +83,13 @@ inline Color operator-(Color &c1,Color &c2){
     return Color( c1.r * c1.a - c2.r * c2.a,
                  c1.g * c1.a - c2.g * c2.a,
                  c1.b * c1.a - c2.b * c2.a,1.0);
+}
+
+inline Color operator*(Color &c1,Color &c2){
+    return Color( c1.r * c2.r,
+                 c1.g * c2.g,
+                 c1.b * c2.b,
+                 c1.a * c2.a);
 }
 
 inline Color operator*(Color &c,float f){
@@ -129,7 +155,6 @@ struct Vector{
     friend vector_s operator+(vector_s &v1,vector_s &v2);
 };
 
-
 inline float operator*(vector_s &v1,vector_s &v2){
     return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z;
 }
@@ -155,6 +180,12 @@ typedef struct Vertex{
         pos = v.pos;
     }
 }vertex_s;
+
+typedef struct{
+    int type;
+    int a;
+    int b;
+}pair_s;
 
 typedef struct Matrix{
     float m[4][4];
@@ -183,6 +214,129 @@ typedef struct Matrix{
             for(int j = 0;j < 4;j++)
                 m[i][j] = res.m[i][j];
         return *this;
+    }
+    
+    Matrix inverse(){
+        float middle[4][4];
+        float res[4][4];
+        
+        for(int i = 0;i < 4;i++)
+            for(int j = 0;j < 4;j++){
+                middle[i][j] = m[i][j];
+                res[i][j] = (i == j);
+            }
+        
+        Matrix mat;
+        
+        pair_s pair[6];
+        int swapTime = 0;
+        
+        for(int i = 0;i < 3;i++){
+            float pivot = middle[i][i];
+            int row = i;
+            int col = i;
+            //find max pivot
+            for(int l = i;l < 4;l++)
+                for(int k = i;k < 4;k++)
+                    if(fabs(middle[l][k]) > fabs(pivot)){
+                        pivot = middle[l][k];
+                        row = l;
+                        col = k;
+                    }
+            
+            if(fabs(pivot) < 1e-6){
+                std::cout<<"matrix inverse error"<<std::endl;
+                exit(0);
+            }
+            
+            if(row != i) {// swap i and col row
+                pair[swapTime].type = 1;
+                pair[swapTime].a = row;
+                pair[swapTime].b = i;
+                for(int ii = 0;ii < 4;ii++){
+                    swap(middle[i][ii],middle[row][ii]);
+                    swap(res[i][ii],res[row][ii]);
+                }
+                swapTime++;
+            }
+            
+            if(col != i){
+                pair[swapTime].type = 2;
+                pair[swapTime].a = col;
+                pair[swapTime].b = i;
+                for(int jj = 0;jj < 4;jj++){
+                    swap(middle[jj][col],middle[jj][i]);
+                    //swap(res[jj][col],res[jj][i]);
+                }
+                swapTime++;
+            }
+            
+            float a = middle[i][i];
+            
+            for(int j = 0;j < 4;j++){
+                middle[i][j] /= a;
+                res[i][j] /= a;
+            }
+            for(int j = i + 1;j < 4;j++){
+
+                float b = -middle[j][i];
+
+                for(int k = 0;k < 4;k++){
+                    middle[j][k] += middle[i][k] * b;
+                    res[j][k] += res[i][k] * b;
+                }
+            }
+        }
+        
+        if(fabs(middle[3][3]) < 1e-6){
+            std::cout<<"matrix inverse error1"<<std::endl;
+            exit(0);
+        }
+        
+        for(int i = 3;i > 0;i--){
+            float c = middle[i][i];
+            if(fabs(c) < 1e-6){
+                std::cout<<"matrix inverse error2"<<std::endl;
+                exit(0);
+            }
+            for(int k = 0;k < 4;k++){
+                res[i][k] /= c;
+                middle[i][k] /= c;
+            }
+            for(int j = i - 1;j >= 0;j--){
+                float d = -middle[j][i];
+                for(int k = 0;k < 4;k++){
+                    middle[j][k] += middle[i][k] * d;
+                    res[j][k] += res[i][k] * d;
+                }
+            }
+        }
+        
+        for(int i = swapTime - 1;i >= 0;i--){
+            int a = pair[i].a;
+            int b = pair[i].b;
+            if(pair[i].type == 2){//
+                for(int ii = 0;ii < 4;ii++)
+                    swap(res[a][ii],res[b][ii]);
+            }
+//            else{
+//                for(int ii = 0;ii < 4;ii++)
+//                    swap(res[ii][a],res[ii][b]);
+//            }
+        }
+
+        memcpy(&mat.m,&res, sizeof(float) * 16);
+        
+        return mat;
+    }
+    
+    Matrix transpose(){
+        Matrix newM;
+        for(int i = 0;i < 4;i++)
+            for(int j = 0;j < 4;j++)
+                newM.m[i][j] = this->m[j][i];
+        //newM.print();
+        return newM;
     }
     
     void preMultiply(Matrix& m2){
@@ -242,17 +396,6 @@ inline vector_s operator*(Matrix &c1,vector_s &v){
         }
     return vector_s(res[0],res[1],res[2],res[3]);
 }
-
-typedef struct {
-    matrix_s world;
-    matrix_s view;
-    matrix_s projection;
-    matrix_s totalTransform;
-    void updateTransform(){
-        matrix_s m = view * world;
-        totalTransform = projection * m;
-    }
-}transform_s;
 
 typedef struct Vertex2i{
     int x,y;

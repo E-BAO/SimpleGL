@@ -24,31 +24,34 @@ void display()
     renderer.clearBuffer();
     //Renderer::drawLine(frameBuffer,50,280,color_s(1.0,0.0,0.0,1.0),250,30,color_s(0.0,1.0,0.0,1.0));
 
+    
     vertex_s vertex[3];
     vertex[0].color = color_s(1.0,0.0,0.0,1.0);
-    vertex[1].color = color_s(1.0,0.0,0.0,1.0);
-    vertex[2].color = color_s(1.0,0.0,0.0,1.0);
+    vertex[1].color = color_s(0.0,1.0,0.0,1.0);
+    vertex[2].color = color_s(0.0,0.0,1.0,1.0);
     
-    vertex[0].pos = point_s(.6,0,-2,1.0);
-    vertex[1].pos = point_s(-0.1,.5,-2.0,1.0);
-    vertex[2].pos = point_s(-0.1,0,-2.0,1.0);
+    vertex[0].pos = point_s(-0.5,0.5,-2.0,1.0);
+    vertex[1].pos = point_s(0.5,-0.5,-2.0,1.0);
+    vertex[2].pos = point_s(-0.5,-0.5,-2.0,1.0);
     
     vertex_s vertex1[3];
-    vertex1[0].color = color_s(0.0,1.0,0.0,1.0);
-    vertex1[1].color = color_s(0.0,1.0,0.0,1.0);
+    vertex1[0].color = color_s(1.0,0.0,0.0,1.0);
+    vertex1[1].color = color_s(0.0,1.0,1.0,1.0);
     vertex1[2].color = color_s(0.0,1.0,0.0,1.0);
     
     //vertex[3].color = color_s(0.0,1.0,0.0,1.0);
 //    vertex1[0].pos = point_s(0,0,-2.5,1.0);
 //    vertex1[1].pos = point_s(0,.7,-2.5,1.0);
 //    vertex1[2].pos = point_s(0,0,-1.5,1.0);
-    vertex1[0].pos = point_s(.6,0,-2.2,1.0);
-    vertex1[1].pos = point_s(-0.1,.5,-2.2,1.0);
-    vertex1[2].pos = point_s(-0.1,0,-2.2,1.0);
+    vertex1[0].pos = point_s(-0.5,0.5,-2.0,1.0);
+    vertex1[1].pos = point_s(0.5,0.5,-2.0,1.0);
+    vertex1[2].pos = point_s(0.5,-0.5,-2.0,1.0);
     //renderer.setLookAt(point_s(0.0,0.0,1.0,1.0), point_s(0.0,0.0,0.0,1.0), point_s(0.0,1.0,0.0,1.0));
     
-    renderer.drawTriangle(vertex);
-    renderer.drawTriangle(vertex1);
+    Scene mainScene;
+    renderer.render(&mainScene);
+//    renderer.drawTriangle(vertex);
+//    renderer.drawTriangle(vertex1);
     
     glDrawPixels(renderer.win_width,renderer.win_height,GL_RGB,GL_FLOAT,renderer.frameBuffer);
     
@@ -77,7 +80,8 @@ void keyCallback(unsigned char key,int x,int y){
     if(key == 'r'){renderer.setTranslate(0.1, 0.0, 0.0);}
     if(key == 'f'){renderer.setTranslate(0.0, 0.0, 0.1);}
     if(key == 'b'){renderer.setTranslate(0.0, 0.0, -0.1);}
-    if(key == ' '){renderer.setRotate(10, 0,1,-2.0, 0,0,-2.0);}
+    if(key == ']'){renderer.setRotate(5, 0,1,-2.5, 0,0,-2.5);}
+    if(key == '['){renderer.setRotate(-5, 0,1,-2.5, 0,0,-2.5);}
 
     display();
 }
@@ -85,6 +89,31 @@ void keyCallback(unsigned char key,int x,int y){
     
 int main (int argc,  char *argv[])
 {
+    Matrix mat;
+    mat.setZero();
+    mat.m[0][0] = 1;
+    mat.m[0][1] = 42;
+    mat.m[0][2] = 0;
+    mat.m[0][3] = 0;
+    
+    mat.m[1][0] = 2;
+    mat.m[1][1] = 48;
+    mat.m[1][2] = 0;
+    mat.m[1][3] = 1;
+    
+    mat.m[2][0] = 0;
+    mat.m[2][1] = -4.2;
+    mat.m[2][2] = 0;
+    mat.m[2][3] = 1;
+    
+    mat.m[3][0] = 0;
+    mat.m[3][1] = 1.8;
+    mat.m[3][2] = 0.9;
+    mat.m[3][3] = 2;
+    
+    mat.transpose();
+    mat.inverse();
+    
     glutInit(&argc, argv);                             // 初始化glut库
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);  // 显示模式RGBA+双缓存
     // 创建一个窗口
